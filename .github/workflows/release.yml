@@ -1,0 +1,21 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812 # v2.7.0
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

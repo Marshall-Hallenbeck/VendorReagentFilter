@@ -1,0 +1,5 @@
+package-as: VendorReagentFilter
+
+ignore:
+  - tests
+  - README.md

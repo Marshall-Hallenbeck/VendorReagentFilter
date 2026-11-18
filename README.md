@@ -8,7 +8,9 @@ When the checkbox is selected, the recipe list shows only learned recipes for wh
 
 ## Install
 
-Copy the `VendorReagentFilter` folder into `World of Warcraft\_forever_\Interface\AddOns`. Then type `/reload` in game.
+Download the zip file of the latest release. Extract it into `World of Warcraft\_forever_\Interface\AddOns`. Then type `/reload` in game.
+
+For development, clone this repository into the `AddOns` folder with the folder name `VendorReagentFilter`.
 
 ## Use
 
@@ -53,6 +55,23 @@ The list is saved for each account. Change it with these commands:
 
 ```bash
 lua tests/test_filter.lua
+```
+
+## Release
+
+A pushed Git tag that starts with `v` starts the release workflow. The workflow uses the [BigWigsMods packager](https://github.com/BigWigsMods/packager). It makes the zip file and a GitHub release.
+
+The workflow also uploads to CurseForge when these two items are set:
+
+- `## X-Curse-Project-ID: <project ID>` in `VendorReagentFilter.toc`.
+- The repository secret `CF_API_KEY`.
+
+```bash
+git tag v1.0.1
+```
+
+```bash
+git push origin v1.0.1
 ```
 
 ## License

@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Vendor Reagent Filter
 ## Notes: Adds a "Have Materials (except vendor reagents)" filter to the profession window.
-## Version: 1.0.0
+## Version: @project-version@
 ## SavedVariables: VendorReagentFilterDB
 
 VendorReagentFilter.lua

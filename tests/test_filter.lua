@@ -1,5 +1,5 @@
 -- Runs VendorReagentFilter.lua against stubs of the WoW API.
--- Run from the folder that contains VendorReagentFilter/ and tests/.
+-- Run from the repository root.
 
 local MEAT, SPICE, FISH = 100, 2678, 200
 
@@ -113,7 +113,7 @@ ProfessionsFrame = {
 	},
 }
 
-assert(loadfile("VendorReagentFilter/VendorReagentFilter.lua"))("VendorReagentFilter")
+assert(loadfile("VendorReagentFilter.lua"))("VendorReagentFilter")
 loadedCallbacks.VendorReagentFilter()
 loadedCallbacks.Blizzard_ProfessionsTemplates()
 
