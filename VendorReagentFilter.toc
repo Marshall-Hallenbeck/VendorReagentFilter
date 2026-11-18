@@ -3,5 +3,6 @@
 ## Notes: Adds a "Have Materials (except vendor reagents)" filter to the profession window.
 ## Version: @project-version@
 ## SavedVariables: VendorReagentFilterDB
+## X-Curse-Project-ID: 1814637
 
 VendorReagentFilter.lua
