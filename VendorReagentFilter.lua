@@ -43,6 +43,10 @@ local function CanCraftWithoutVendorReagents(recipeInfo)
 	return true
 end
 
+-- The game saves the collapsed state only for categories that are in the list.
+-- These are the collapsed categories that the filter removed from the list.
+local prunedCollapsedCategories = {}
+
 -- Removes recipes that fail the filter, then categories that have no recipes left.
 local function PruneNode(node)
 	local hasRecipe = false
@@ -60,6 +64,9 @@ local function PruneNode(node)
 			if PruneNode(child) then
 				hasRecipe = true
 			else
+				if child:IsCollapsed() then
+					prunedCollapsedCategories[data.categoryInfo.categoryID] = true
+				end
 				node:Remove(child, true)
 			end
 		elseif data.isDivider then
@@ -82,14 +89,33 @@ end)
 
 EventUtil.ContinueOnAddOnLoaded("Blizzard_ProfessionsTemplates", function()
 	local generateCraftingDataProvider = Professions.GenerateCraftingDataProvider
-	function Professions.GenerateCraftingDataProvider(...)
-		local dataProvider = generateCraftingDataProvider(...)
+	local listIsSearchResult = false
+	function Professions.GenerateCraftingDataProvider(professionID, searching, noStripCategories, collapses)
+		-- The game saves the collapsed state only when the window closes, and each rebuild
+		-- of the list uses that saved state. Save the state of the current list first.
+		if ProfessionsFrame and not listIsSearchResult then
+			local craftingPage = ProfessionsFrame.CraftingPage
+			craftingPage:StoreCollapses(craftingPage.RecipeList.ScrollBox)
+			collapses = craftingPage:GetCollapses()
+		end
+		listIsSearchResult = searching
+
+		local dataProvider = generateCraftingDataProvider(professionID, searching, noStripCategories, collapses)
+		prunedCollapsedCategories = {}
 		if VendorReagentFilterDB.enabled then
 			PruneNode(dataProvider:GetRootNode())
 			dataProvider:Invalidate()
 		end
 		return dataProvider
 	end
+end)
+
+EventUtil.ContinueOnAddOnLoaded("Blizzard_Professions", function()
+	hooksecurefunc(ProfessionsFrame.CraftingPage, "StoreCollapses", function(craftingPage)
+		for categoryID in pairs(prunedCollapsedCategories) do
+			craftingPage.collapses[categoryID] = true
+		end
+	end)
 end)
 
 Menu.ModifyMenu("MENU_PROFESSIONS_FILTER", function(_, rootDescription)

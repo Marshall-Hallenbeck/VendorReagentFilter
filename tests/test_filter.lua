@@ -12,6 +12,7 @@ local schematics = {
 }
 
 local loadedCallbacks = {}
+local lastDataProvider
 local menuCallback
 local initCount = 0
 
@@ -27,6 +28,13 @@ Menu = {
 	end,
 }
 SlashCmdList = {}
+hooksecurefunc = function(object, name, hook)
+	local original = object[name]
+	object[name] = function(...)
+		original(...)
+		hook(...)
+	end
+end
 CopyTable = function(source)
 	local copy = {}
 	for key, value in pairs(source) do
@@ -68,6 +76,7 @@ local function NewNode(data)
 	local node = { data = data, nodes = {} }
 	function node:GetNodes() return self.nodes end
 	function node:GetData() return self.data end
+	function node:IsCollapsed() return self.collapsed end
 	function node:Insert(childData)
 		local child = NewNode(childData)
 		self.nodes[#self.nodes + 1] = child
@@ -84,38 +93,52 @@ local function NewNode(data)
 end
 
 Professions = {
-	GenerateCraftingDataProvider = function()
+	GenerateCraftingDataProvider = function(_, _, _, collapses)
+		collapses = collapses or {}
 		local root = NewNode()
-		local meat = root:Insert({ categoryInfo = { name = "Meat" } })
+		local meat = root:Insert({ categoryInfo = { name = "Meat", categoryID = 1 } })
 		meat:Insert({ topPadding = true })
 		meat:Insert({ recipeInfo = { recipeID = 1, learned = true } })
 		meat:Insert({ recipeInfo = { recipeID = 4, learned = false } })
 		meat:Insert({ bottomPadding = true })
-		local fish = root:Insert({ categoryInfo = { name = "Fish" } })
+		local fish = root:Insert({ categoryInfo = { name = "Fish", categoryID = 2 } })
+		fish.collapsed = collapses[2]
 		fish:Insert({ topPadding = true })
 		fish:Insert({ recipeInfo = { recipeID = 2, learned = true } })
 		fish:Insert({ bottomPadding = true })
-		local other = root:Insert({ categoryInfo = { name = "Other" } })
+		local other = root:Insert({ categoryInfo = { name = "Other", categoryID = 3 } })
 		other:Insert({ recipeInfo = { recipeID = 3, learned = true } })
 		root:Insert({ isDivider = true })
-		return {
+		lastDataProvider = {
 			invalidated = false,
 			GetRootNode = function() return root end,
 			Invalidate = function(self) self.invalidated = true end,
 		}
+		return lastDataProvider
 	end,
 }
 ProfessionsFrame = {
 	IsShown = function() return true end,
 	CraftingPage = {
 		professionInfo = {},
+		RecipeList = { ScrollBox = {} },
 		Init = function() initCount = initCount + 1 end,
+		GetCollapses = function(self) return self.collapses end,
+		StoreCollapses = function(self)
+			self.collapses = {}
+			for _, child in ipairs(lastDataProvider and lastDataProvider:GetRootNode():GetNodes() or {}) do
+				if child.data.categoryInfo and child:IsCollapsed() then
+					self.collapses[child.data.categoryInfo.categoryID] = true
+				end
+			end
+		end,
 	},
 }
 
 assert(loadfile("VendorReagentFilter.lua"))("VendorReagentFilter")
 loadedCallbacks.VendorReagentFilter()
 loadedCallbacks.Blizzard_ProfessionsTemplates()
+loadedCallbacks.Blizzard_Professions()
 
 local function RecipeIDs()
 	local ids = {}
@@ -183,6 +206,32 @@ Check("not enough fish", (RecipeIDs()), "1,3")
 
 bags = { [MEAT] = 1, [FISH] = 2 }
 Check("enough fish", (RecipeIDs()), "1,2,3")
+
+local function CategoryNode(categoryID)
+	for _, child in ipairs(lastDataProvider:GetRootNode():GetNodes()) do
+		if child.data.categoryInfo and child.data.categoryInfo.categoryID == categoryID then
+			return child
+		end
+	end
+end
+
+CategoryNode(2).collapsed = true
+RecipeIDs()
+Check("rebuild keeps a category collapsed", CategoryNode(2):IsCollapsed(), true)
+
+bags = { [MEAT] = 1 }
+Check("collapsed category removed by filter", (RecipeIDs()), "1,3")
+Check("removed category is not in the list", CategoryNode(2), nil)
+RecipeIDs()
+Check("removed category stays in saved state", ProfessionsFrame.CraftingPage.collapses[2], true)
+
+bags = { [MEAT] = 1, [FISH] = 2 }
+RecipeIDs()
+Check("returned category is collapsed", CategoryNode(2):IsCollapsed(), true)
+
+CategoryNode(2).collapsed = false
+RecipeIDs()
+Check("rebuild keeps a category open", CategoryNode(2):IsCollapsed(), nil)
 
 SlashCmdList.VENDORREAGENTFILTER("remove " .. SPICE)
 Check("spice removed from vendor list", (RecipeIDs()), "")
